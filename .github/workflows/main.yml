@@ -1,0 +1,126 @@
+name: Phigros Auto Extract & Release
+on:
+  schedule:
+    # UTC时间，按需修改轮询间隔
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # 支持手动触发测试
+
+env:
+  APK_FILE: base.apk
+  EXTRACT_OUT: phira
+  PACKAGE_NAME: com.PigeonGames.Phigros
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y android-sdk-platform-tools unzip python3 python3-pip
+          pip install packaging requests
+
+      - name: Download apkeep (APK downloader)
+        run: |
+          curl -L -o apkeep https://github.com/EFForg/apkeep/releases/latest/download/apkeep-x86_64-unknown-linux-gnu
+          chmod +x apkeep
+
+      - name: Download Phigros APK & save as base.apk
+        run: |
+          ./apkeep -a ${{ env.PACKAGE_NAME }} -o ${{ env.APK_FILE }}
+          ls -lh ${{ env.APK_FILE }}
+
+      - name: Read APK versionName
+        id: get_apk_ver
+        run: |
+          VER=$(apkanalyzer manifest version-name ${{ env.APK_FILE }})
+          echo "raw_version=$VER" >> $GITHUB_OUTPUT
+          # 替换tag非法字符 / : * ? " < > | → _
+          TAG=$(echo "$VER" | sed 's/[\/:*?"<>|]/_/g')
+          echo "safe_tag=$TAG" >> $GITHUB_OUTPUT
+          echo "APK Version: $VER, safe tag: $TAG"
+
+      - name: Fetch latest release version from GitHub API
+        id: get_latest_release
+        continue-on-error: true # 仓库无release时不会报错
+        run: |
+          python3 - <<END
+          import requests, os, json
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GITHUB_TOKEN"]
+          headers = {"Authorization": f"token {token}", "Accept":"application/vnd.github.v3+json"}
+          resp = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", headers=headers)
+          data = resp.json()
+          tag_name = data["tag_name"]
+          print(f"latest_tag={tag_name}")
+          END
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare version
+        id: ver_cmp
+        run: |
+          python3 - <<END
+          from packaging.version import Version
+          import os
+          raw_ver = os.environ["RAW_VER"]
+          latest_tag = os.environ.get("LATEST_TAG", "")
+          result = "new"
+          if latest_tag:
+              try:
+                  if Version(raw_ver) == Version(latest_tag):
+                      result = "duplicate"
+              except:
+                  pass
+          print(f"result={result}")
+          END
+        env:
+          RAW_VER: ${{ steps.get_apk_ver.outputs.raw_version }}
+          LATEST_TAG: ${{ steps.get_latest_release.outputs.latest_tag }}
+
+      - name: Exit if version duplicate
+        if: steps.ver_cmp.outputs.result == 'duplicate'
+        run: |
+          echo "✅ Latest release version matches APK version, skip."
+          exit 0
+
+      - name: Run Phigros_Extractor full extract (non-interactive)
+        if: steps.ver_cmp.outputs.result == 'new'
+        run: |
+          python3 main.py ${{ env.APK_FILE }} ${{ env.EXTRACT_OUT }} <<< $'y\ny\ny'
+
+      - name: Pack each subfolder in phira/ into separate zip
+        if: steps.ver_cmp.outputs.result == 'new'
+        id: pack_zips
+        run: |
+          RAW_VER=${{ steps.get_apk_ver.outputs.raw_version }}
+          mkdir -p release_assets
+          ZIP_LIST=""
+          cd ${{ env.EXTRACT_OUT }}
+          # 遍历phira下一级子文件夹
+          for dir in */ ; do
+            dirname=${dir%/}
+            zipname="PhigrosV${RAW_VER}-charts${dirname}.zip"
+            zip -r ../release_assets/$zipname "$dir"
+            ZIP_LIST+="release_assets/$zipname\n"
+          done
+          cd ..
+          echo "ZIP_LIST<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$ZIP_LIST" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: steps.ver_cmp.outputs.result == 'new'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_apk_ver.outputs.safe_tag }}
+          name: v${{ steps.get_apk_ver.outputs.raw_version }}
+          body: "Phigros v${{ steps.get_apk_ver.outputs.raw_version }} official charts"
+          files: ${{ steps.pack_zips.outputs.ZIP_LIST }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
