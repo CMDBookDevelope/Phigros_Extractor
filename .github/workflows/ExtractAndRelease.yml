@@ -29,7 +29,8 @@ jobs:
 
       - name: Download Phigros APK & save as base.apk
         run: |
-          ./apkeep -a ${{ env.PACKAGE_NAME }} ${{ env.APK_FILE }}
+          ./apkeep -a ${{ env.PACKAGE_NAME }}
+          mv *.apk ${{ env.APK_FILE }}
           ls -lh ${{ env.APK_FILE }}
 
       - name: Read APK versionName
