@@ -16,17 +16,10 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Install Android SDK & cmdline-tools
-        run: |
-            curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | sudo tee /etc/apt/keyrings/google.asc >/dev/null
-            sudo sh -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google.asc] http://dl.google.com/android/cli/latest/debian/ stable main" > /etc/apt/sources.list.d/android-cli.list'
-            sudo apt update
-            sudo apt install android-cli
-
       - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y unzip python3 python3-pip
+          sudo apt install -y unzip python3 python3-pip apkinfo
           pip install packaging requests
 
       - name: Download apkeep (APK downloader)
@@ -43,7 +36,7 @@ jobs:
       - name: Read APK versionName
         id: get_apk_ver
         run: |
-          VER=$(apkanalyzer manifest version-name ${{ env.APK_FILE }})
+          VER=$(apkinfo "${{ env.APK_FILE }}" | grep 'Version name:' | cut -d: -f2 | xargs)
           echo "raw_version=$VER" >> $GITHUB_OUTPUT
           # 替换tag非法字符 / : * ? " < > | → _
           TAG=$(echo "$VER" | sed 's/[\/:*?"<>|]/_/g')
