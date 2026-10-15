@@ -30,9 +30,7 @@ jobs:
       - name: Download Phigros APK & save as base.apk
         run: |
           ./apkeep -d apk-pure  -o 'acknowledge_dangers=true' -a ${{ env.PACKAGE_NAME }} .
-          echo successfully download🎉
-          ls
-          mv *.apk ${{ env.APK_FILE }}
+          mv *.xapk ${{ env.APK_FILE }}
           ls -lh ${{ env.APK_FILE }}
 
       - name: Read APK versionName
