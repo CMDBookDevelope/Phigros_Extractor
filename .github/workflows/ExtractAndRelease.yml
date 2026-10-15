@@ -22,9 +22,15 @@ jobs:
           sudo apt install -y android-sdk-platform-tools unzip python3 python3-pip
           pip install packaging requests
 
+      - name: Download apkeep (APK downloader)
+        run: |
+          curl -L -o apkeep https://github.com/EFForg/apkeep/releases/latest/download/apkeep-x86_64-unknown-linux-gnu
+          chmod +x apkeep
+
       - name: Download Phigros APK & save as base.apk
         run: |
-          wget --tries=3 -O ${{ env.APK_FILE }} "https://gptoapk.com/api/download-apk?appId=com.PigeonGames.Phigros&delivery=direct"
+          ./apkeep -a ${{ env.PACKAGE_NAME }} .
+          mv *.apk ${{ env.APK_FILE }}
           ls -lh ${{ env.APK_FILE }}
 
       - name: Read APK versionName
