@@ -67,6 +67,7 @@ jobs:
           from packaging.version import Version
           import os
           raw_ver = os.environ["RAW_VER"]
+          print(raw_ver)
           latest_tag = os.environ.get("LATEST_TAG", "")
           result = "new"
           if latest_tag:
