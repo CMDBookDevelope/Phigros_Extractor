@@ -91,7 +91,7 @@ jobs:
 
       - name: Run Phigros_Extractor full extract (non-interactive)
         run: |
-          python3 main.py ${{ env.APK_FILE }} ${{ env.EXTRACT_OUT }} <<< $'y\ny\ny'
+          python3 main.py python phira.py --ogg -f <<< $'y\ny\ny'
 
       - name: Pack each subfolder in phira/ into separate zip
         id: pack_zips
