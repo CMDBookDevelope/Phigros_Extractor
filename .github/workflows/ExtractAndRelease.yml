@@ -54,7 +54,9 @@ jobs:
           headers = {"Authorization": f"token {token}", "Accept":"application/vnd.github.v3+json"}
           resp = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", headers=headers)
           data = resp.json()
-          tag_name = data["tag_name"]
+          tag_name = ""
+          if data:
+              tag_name = data["tag_name"]
           print(f"latest_tag={tag_name}")
           END
         env:
@@ -67,7 +69,6 @@ jobs:
           from packaging.version import Version
           import os
           raw_ver = os.environ["RAW_VER"]
-          print(raw_ver)
           latest_tag = 0
           latest_tag = os.environ.get("LATEST_TAG", "")
           result = "new"
