@@ -91,6 +91,10 @@ jobs:
 
       - name: Run Phigros_Extractor full extract (non-interactive)
         run: |
+          echo 导出曲目信息表...
+          python3 gameInformation.py base.apk || goto :fail
+          echo 提取全部资源（谱面/曲绘/音频/头像，约 1~3 分钟）...
+          python3 resource.py base.apk
           python3 phira.py --ogg -f <<< $'y\ny\ny'
 
       - name: Pack each subfolder in phira/ into separate zip
