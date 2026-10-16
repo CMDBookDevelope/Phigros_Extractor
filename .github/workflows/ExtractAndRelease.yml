@@ -90,12 +90,10 @@ jobs:
           exit 0
 
       - name: Run Phigros_Extractor full extract (non-interactive)
-        if: steps.ver_cmp.outputs.result == 'new'
         run: |
           python3 main.py ${{ env.APK_FILE }} ${{ env.EXTRACT_OUT }} <<< $'y\ny\ny'
 
       - name: Pack each subfolder in phira/ into separate zip
-        if: steps.ver_cmp.outputs.result == 'new'
         id: pack_zips
         run: |
           RAW_VER=${{ steps.get_apk_ver.outputs.raw_version }}
@@ -115,7 +113,6 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        if: steps.ver_cmp.outputs.result == 'new'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_apk_ver.outputs.safe_tag }}
