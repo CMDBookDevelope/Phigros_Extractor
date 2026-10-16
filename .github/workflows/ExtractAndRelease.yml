@@ -68,6 +68,7 @@ jobs:
           import os
           raw_ver = os.environ["RAW_VER"]
           print(raw_ver)
+          latest_tag = 0
           latest_tag = os.environ.get("LATEST_TAG", "")
           result = "new"
           if latest_tag:
